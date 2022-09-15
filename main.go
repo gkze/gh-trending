@@ -116,7 +116,12 @@ var trendingCmd cobra.Command = cobra.Command{
 	Short: "Show trending repositories",
 	Args:  cobra.MaximumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		trendings, err := GetTrending(args[0])
+		trendings, err := GetTrending(func() string {
+			if len(args) == 1 {
+				return args[0]
+			}
+			return ""
+		}())
 		if err != nil {
 			return err
 		}
