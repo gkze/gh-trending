@@ -69,11 +69,14 @@ func GetTrending(language string) ([]Trending, error) {
 			s.Find(fmt.Sprintf("a[href=\"%s/stargazers\"]", href)).Text(),
 			cutset,
 		)
-		stargazers, err := strconv.ParseInt(
-			strings.ReplaceAll(stargazersStr, ",", ""), 10, 64,
-		)
-		if err != nil {
-			log.Printf("Could not parse %v as int64", stargazersStr)
+		var stargazers int64 = 0
+		if stargazersStr != "" {
+			stargazers, err = strconv.ParseInt(
+				strings.ReplaceAll(stargazersStr, ",", ""), 10, 64,
+			)
+			if err != nil {
+				log.Printf("Could not parse %v as int64", stargazersStr)
+			}
 		}
 
 		lang := strings.Trim(
