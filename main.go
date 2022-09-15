@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -98,6 +99,10 @@ func GetTrending(language string) ([]Trending, error) {
 		}
 
 		trendings = append(trendings, trending)
+	})
+
+	sort.Slice(trendings, func(i, j int) bool {
+		return *(trendings[i].Stars) > *(trendings[j].Stars)
 	})
 
 	return trendings, nil
