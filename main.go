@@ -114,7 +114,7 @@ func GetTrending(language string) ([]Trending, error) {
 var trendingCmd cobra.Command = cobra.Command{
 	Use:   "gh-trending (language?) ...",
 	Short: "Show trending repositories",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		trendings, err := GetTrending(args[0])
 		if err != nil {
