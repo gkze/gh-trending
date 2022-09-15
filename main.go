@@ -177,7 +177,9 @@ var trendingCmd cobra.Command = cobra.Command{
 
 func init() {
 	log.SetOutput(os.Stderr)
-	openInBrowser = trendingCmd.PersistentFlags().BoolP("web", "w", false, "Open in web browser")
+	openInBrowser = trendingCmd.PersistentFlags().BoolP(
+		"web", "w", false, "Open in web browser",
+	)
 }
 
 func main() {
