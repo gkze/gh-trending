@@ -81,8 +81,14 @@ func GetTrending(language string) ([]github.Repository, error) {
 					10, 64,
 				)
 				if err != nil {
-					panic(err)
+					log.Printf(
+						"Could not parse stargazers for %s/%s: %+v\n",
+						ownerRepo[1], ownerRepo[2], err,
+					)
+
+					return &stargazersInt
 				}
+
 				stargazersInt = int(stargazersInt64)
 				return &stargazersInt
 			}(),
