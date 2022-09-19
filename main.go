@@ -73,19 +73,17 @@ func GetTrending(language string) ([]github.Repository, error) {
 			Owner: &github.User{Login: &ownerRepo[1]},
 			Name:  &ownerRepo[2],
 			StargazersCount: func() *int {
+				stargazersInt := -1
 				stargazersInt64, err := strconv.ParseInt(
-					cutset.ReplaceAllString(
-						s.Find(
-							fmt.Sprintf("a[href=\"%s/stargazers\"]", href),
-						).Text(),
-						"",
-					),
+					cutset.ReplaceAllString(s.Find(
+						fmt.Sprintf("a[href=\"%s/stargazers\"]", href),
+					).Text(), ""),
 					10, 64,
 				)
 				if err != nil {
 					panic(err)
 				}
-				stargazersInt := int(stargazersInt64)
+				stargazersInt = int(stargazersInt64)
 				return &stargazersInt
 			}(),
 			Language: func() *string {
