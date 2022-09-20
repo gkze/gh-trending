@@ -35,12 +35,50 @@ const (
 	table outputFormat = "table"
 )
 
-var (
-	openInBrowser *bool
-	outFormat     *string
+type sortKey string
+
+const (
+	owner    sortKey = "owner"
+	name     sortKey = "name"
+	language sortKey = "language"
+	stars    sortKey = "stars"
 )
 
-func GetTrending(language string) ([]github.Repository, error) {
+var (
+	openInBrowser   *bool
+	outFormat       *string
+	selectedSortKey *string
+)
+
+func SortReposByAttr(repos []github.Repository, attr sortKey) {
+	sort.Slice(repos, func(i, j int) bool {
+		repoI := repos[i]
+		repoJ := repos[j]
+
+		switch attr {
+		case owner:
+			return *(repoI.Owner.Login) < *(repoJ.Owner.Login)
+		case name:
+			return *(repoI.Name) < *(repoJ.Name)
+		case language:
+			if repoI.Language == nil || repoJ.Language == nil {
+				return false
+			}
+
+			return *(repoI.Language) < *(repoJ.Language)
+		case stars:
+			if repoI.StargazersCount == nil || repoJ.StargazersCount == nil {
+				return false
+			}
+
+			return *(repoI.StargazersCount) < *(repoJ.StargazersCount)
+		default:
+			return false
+		}
+	})
+}
+
+func GetTrending(language, attr string) ([]github.Repository, error) {
 	res, err := http.Get(fmt.Sprintf("%s/%s", trendingBaseURL, language))
 	if err != nil {
 		return nil, err
@@ -113,9 +151,7 @@ func GetTrending(language string) ([]github.Repository, error) {
 		})
 	})
 
-	sort.Slice(trendings, func(i, j int) bool {
-		return *(trendings[i].StargazersCount) > *(trendings[j].StargazersCount)
-	})
+	SortReposByAttr(trendings, sortKey(attr))
 
 	return trendings, nil
 }
@@ -123,21 +159,28 @@ func GetTrending(language string) ([]github.Repository, error) {
 var trendingCmd cobra.Command = cobra.Command{
 	Use:   "gh-trending (language?) ...",
 	Short: "Show trending repositories",
-	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if *openInBrowser && outputFormat(*outFormat) == JSON {
 			log.Fatal("Cannot select output format when opening in browser")
 		}
 
-		trendings, err := GetTrending(func() string {
-			if len(args) == 1 {
-				return args[0]
+		var trendings []github.Repository
+		var err error
+		if len(args) > 0 {
+			for _, lang := range args {
+				langTrendings, err := GetTrending(lang, *selectedSortKey)
+				if err != nil {
+					return err
+				}
+				trendings = append(trendings, langTrendings...)
 			}
-			return ""
-		}())
-		if err != nil {
-			return err
+		} else {
+			if trendings, err = GetTrending("", *selectedSortKey); err != nil {
+				return err
+			}
 		}
+
+		SortReposByAttr(trendings, sortKey(*selectedSortKey))
 
 		if *openInBrowser {
 			b := browser.New("", os.Stdout, os.Stderr)
@@ -162,7 +205,9 @@ var trendingCmd cobra.Command = cobra.Command{
 			trendingJSONbuf := bufio.NewReadWriter(
 				bufio.NewReader(&b), bufio.NewWriter(&b),
 			)
-			if err := json.NewEncoder(trendingJSONbuf).Encode(trendings); err != nil {
+			if err := json.NewEncoder(
+				trendingJSONbuf,
+			).Encode(trendings); err != nil {
 				return err
 			}
 
@@ -216,6 +261,10 @@ func init() {
 	log.SetOutput(os.Stderr)
 	openInBrowser = trendingCmd.PersistentFlags().BoolP(
 		"web", "w", false, "Open in web browser",
+	)
+	selectedSortKey = trendingCmd.PersistentFlags().StringP(
+		"sort", "s", "stars",
+		"Sort key for results (valid: owner, name, language, stars)",
 	)
 	outFormat = trendingCmd.PersistentFlags().StringP(
 		"output", "o", string(table), "Output format (valid: json, table)",
